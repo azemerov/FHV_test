@@ -9,11 +9,13 @@ import os.path
 import requests
 import cx_Oracle
 
+# load settings and last update timestamp
 with open('settings.json') as json_file:
     config = json.load(json_file)
 last_ts = config.get("last_ts", "2023-09-18")
 oracle_dir = config["oracle_dir"]
 
+# load dat updated since last timestamp
 result = requests.get(f"https://data.cityofnewyork.us/resource/8wbx-tsch.json", params={"$where": "last_date_updated >= '2023-09-17T00:00:00.000'", "$order": last_ts})
 if result.statuc_code==200:
     data = result.json()
@@ -40,7 +42,7 @@ if result.statuc_code==200:
 
     connection = cx_Oracle.connect(user=config["oracle_user"], password=config["oracle_pswd"], dsn=config["oracle_instance"])
     cur = connection.cursor()
-    # create a stage table as an external table
+    # create an external table to serve as a stage table
     cur.execute("""CREATE TABLE DHV_DATA (
       active                 VARCHAR2(5),
       vehicle_license_number VARCHAR2(15),
@@ -94,7 +96,7 @@ if result.statuc_code==200:
      LOCATION ('dhv_data.cvs')
     )""")
 
-    # import into an actual table, we assume only two columnt in the target table - VEHICLE_LICENSE_NUMBER (PK) and NAME
+    # import into an actual table, we assume only three columnt in the target table - VEHICLE_LICENSE_NUMBER (PK), NAME, and VEHICLE_YEAR
     cur.execute("""MERGE INTO MY_TARGET_TABLE DST USING (SELECT * FROM DHV_DATA) SRC on (SRC.vehicle_license_number=DST.vehicle_license_number)
         when matched then
             update set DST.name = SRC.name, DST.vehicle_year=SRC.vehicle_year
@@ -104,8 +106,8 @@ if result.statuc_code==200:
     # drop the stage table
     cur.execute("DROP TABLE DHV_DATA")
 
-    # save last TS
-    config.get["last_ts"] = "2023-09-18" //todo:
+    # save last timestamp...
+    config.get["last_ts"] = last_ts
     with open('settings.json', 'w') as json_file:
         json.dump(config, json_file)
 
