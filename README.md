@@ -29,3 +29,28 @@ This implementation only outlines the overall task. A real application should
 	- send a notification about success/failure of the execution
 	- if the iteration fails, implement a logic for a retry attempts
 	- ...
+
+To return median, average, minimal and maximal car age we need to convert year value into number and substract it from the current year-
+select
+    median(full_years) median_age,
+    avg(full_years) average_age,  
+    max(full_years) oldest_age,
+    min(full_years) yuongest_age
+from ( 
+    select to_number(to_char(trunc(sysdate, 'year'),'yyyy')) - to_number(vehicle_year) full_years from DHV_DATA
+);
+
+to get the above stats by region we need to deduce the region from either telephone number or postal address. I.e. we use telephone area code as a region, assuming the telephone number format is like '(718)583-9100' -
+select
+    are_code,
+    median(full_years) median_age,
+    avg(full_years) average_age,  
+    max(full_years) oldest_age,
+    min(full_years) yuongest_age
+from ( 
+    select
+        to_number(to_char(trunc(sysdate, 'year'),'yyyy')) - to_number(vehicle_year) full_years,
+        regexp_substr(base_telephone_number, '(\(.+\))', 1,1) are_code
+    from DHV_DATA
+)
+group by are_code;
