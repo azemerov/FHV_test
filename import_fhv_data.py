@@ -17,7 +17,7 @@ oracle_dir = config["oracle_dir"]
 
 # load dat updated since last timestamp
 result = requests.get(f"https://data.cityofnewyork.us/resource/8wbx-tsch.json", params={"$where": "last_date_updated >= '2023-09-17T00:00:00.000'", "$order": last_ts})
-if result.statuc_code==200:
+if result.status_code==200:
     data = result.json()
 
     # create new CSV file in the directory on Oracle server ...
@@ -26,6 +26,7 @@ if result.statuc_code==200:
     csv_writer = csv.writer(data_file)
 
     count = 0
+    import pdb; pdb.set_trace()
     for rec in data:
 
         if count == 0: # 1st record, prepare CSV header...
@@ -36,9 +37,10 @@ if result.statuc_code==200:
      
         # Writing data of CSV file
         csv_writer.writerow(rec.values())
-        last_ts = rec["last_ts"]
+        last_ts = rec["last_date_updated"]
 
     data_file.close()
+    pdb.set_trace()
 
     connection = cx_Oracle.connect(user=config["oracle_user"], password=config["oracle_pswd"], dsn=config["oracle_instance"])
     cur = connection.cursor()
@@ -102,6 +104,7 @@ if result.statuc_code==200:
             update set DST.name = SRC.name, DST.vehicle_year=SRC.vehicle_year
         when not matched then                     -- if match is not found, insert
             insert (vehicle_license_number, name, vehicle_year) values (src.vehicle_license_number, src.name, src.vehicle_year)"""
+               )
     
     # drop the stage table
     cur.execute("DROP TABLE DHV_DATA")
